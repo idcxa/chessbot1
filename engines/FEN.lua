@@ -36,7 +36,7 @@ end
 function database()
     --[[ Function to return values from json body ]]--
     --[[ turn board.fen into http valid link ]]--
-    rep = "https://explorer.lichess.ovh/lichess?variant=standard&speeds[]=bullet&speeds[]=blitz&speeds[]=rapid&speeds[]=classical&ratings[]=1600&ratings[]=1800&ratings[]=2000&ratings[]=2200&ratings[]=2500&fen="..string.gsub(board.fen, "%s+", "%%20")..'&play="e4e5"'
+    rep = "https://explorer.lichess.ovh/lichess?variant=standard&speeds[]=bullet&speeds[]=blitz&speeds[]=rapid&speeds[]=classical&ratings[]=1600&ratings[]=1800&ratings[]=2000&ratings[]=2200&ratings[]=2500&fen="..string.gsub(board.fen, "%s+", "%%20").."&play=e4e5"
     print(rep)
     res = http.request(rep)
     res_parsed = lunajson.decode(res)
