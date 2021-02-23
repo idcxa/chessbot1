@@ -1,0 +1,418 @@
+
+require("math")
+local http = require("socket.http")
+local lunajson = require("lunajson")
+
+local board = {}
+board.startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+board.fen = "4k3/4P3/2n5/1B2R3/8/8/4K3/8 b - - 0 1"
+board.moves = ""
+
+local function move()
+
+    moves = database()
+
+    sum = 0
+    for i = 1,#moves do
+        n = 0
+        n = n + moves[i]["white"]
+        n = n + moves[i]["draws"]
+        n = n + moves[i]["black"]
+        table.insert(moves[i], "total")
+        moves[i]["total"] = n
+        sum = sum + n
+    end
+    local r = math.random(sum)
+    print (sum)
+    for i = 1,#moves do
+        print(moves[i]["san"], moves[i]["total"])
+        if moves[i]["total"] > r then
+            --print("info string", sum)
+            return "bestmove "..moves[i]["uci"]
+        else
+            r = r - moves[i]["total"]
+        end
+    end
+end
+
+function database()
+    --[[ Function to return values from json body ]]--
+    --[[ turn board.fen into http valid link ]]--
+    --print(board.moves)
+    rep = "https://explorer.lichess.ovh/lichess?variant=standard&speeds[]=bullet&speeds[]=blitz&speeds[]=rapid&speeds[]=classical&ratings[]=1600&ratings[]=1800&ratings[]=2000&ratings[]=2200&ratings[]=2500&play="..board.moves.."&fen="..string.gsub(board.fen, "%s+", "%%20")
+    res = http.request(rep)
+    print(res)
+    res_parsed = lunajson.decode(res)
+    local moves = res_parsed["moves"]
+
+
+    -- put FEN into modifiable array
+    -- split board.fen by spaces
+    local FEN = {}
+    for str in string.gmatch(board.fen, "([^".."%s".."]+)") do
+        table.insert(FEN, str)
+    end
+    -- split FEN[1] by "/"
+    local newboard = {}
+    for str in string.gmatch(FEN[1], "([^".."/".."]+)") do
+        table.insert(newboard, str)
+    end
+    -- put result into array
+    local FENarr = {}
+    for i = 1,8 do
+        FENarr[i] = {}
+        for j = 1,#newboard[i] do
+            c = newboard[i]:sub(j,j)
+            if string.match(c, "[1,2,3,4,5,6,7,8]") then
+                for k = 1,tonumber(newboard[i]:sub(j,j)) do
+                    table.insert(FENarr[i], ".")
+                end
+            else
+                table.insert(FENarr[i], c)
+            end
+        end
+    end
+
+    local function empty_array()
+        local t = {}
+        for i = 1,8 do
+            t[i] = {}
+            for j = 1,8 do
+                t[i][j] = nil
+            end
+        end
+        return t
+    end
+
+    -- initialise attacked squares array
+    local attacked = empty_array()
+
+    local checking = empty_array()
+
+    -- moves for rook
+    local function rook(x,y)
+        local rook = empty_array()
+        for i = 1,8 do
+            rook[i][y] = "x"
+            if (string.match(FENarr[i][y], "[r,n,b,q,p,R,N,B,Q,P,K]") or (string.match(FENarr[i][y], "[K]") and FEN[2] == "w")) or (string.match(FENarr[i][y], "[K]") and FEN[2] == "b") then
+                if i ~= x then
+                    if i < y then
+                        for j = 1,i do
+                            rook[j][y] = nil
+                        end
+                    else
+                        break
+                    end
+                end
+            end
+        end
+        for i = 1,8 do
+            if string.match(FENarr[i][y], "[K, k]") and rook[i][y] ~= nil then
+                for j = i,x do
+                    checking[j][y] = "x"
+                end
+            end
+        end
+
+        for i = 1,8 do
+            rook[x][i] = "x"
+            if string.match(FENarr[x][i], "[r,n,b,q,p,k,R,N,B,Q,P,K]") and i ~= y then
+                if i < x then
+                    for j = 1,i-1 do
+                        rook[x][j] = nil
+                    end
+                else
+                    break
+                end
+            end
+
+            if string.match(FENarr[x][i], "[K, k]") and rook[x][i] ~= nil then
+                for j = i,y do
+                    checking[x][j] = "x"
+                end
+            end
+        end
+        rook[x][y] = nil
+        return rook
+    end
+
+    --moves for bishop
+    local function bishop(x,y)
+        local bishop = empty_array()
+        bishop [x] = {}
+        for i = 1,8 do
+            for j = 1,8 do
+                if i + y == j + x or i == -j + x + y then
+                    bishop[i][j] = "x"
+                    if string.match(FENarr[i][j], "[r,n,b,q,p,k,R,N,B,Q,P,K]") then
+                        for k = 1,j-1 do
+                            for p = 1,8 do
+                                if k == ((x-i)*p)/(y-j) + x + y then
+                                    bishop[k][p] = nil
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        for i = 1,8 do
+            for j = 1,8 do
+                if string.match(FENarr[i][j], "[K, k]") and bishop[i][j] ~= nil then
+                    for k = 1,x do
+                        for p = 1,8 do
+                            if k == ((x-i)*p)/(y-j) + x + y then
+                                checking[k][p] = "x"
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        bishop[x][y] = nil
+        return bishop
+    end
+
+    -- moves for king
+    local function king(i,j)
+        local king = empty_array()
+        for x = i-1,i+1 do
+            for y = j-1,j+1 do
+                if x <= 8 and x >= 1 and y <= 8 and y >= 1 then
+                    --king[x][y] = "x"
+                end
+            end
+        end
+        king[i][j] = nil
+        return king
+    end
+
+    local function knight(i,j)
+        local t = empty_array()
+        for x = i-1,i+1,2 do
+            for y = j-1,j+1,2 do
+                if x == i+1 then
+                    t[x+1][y] = "x"
+                elseif x == i-1 then
+                    t[x-1][y] = "x"
+                end
+                if y == j+1 then
+                    t[x][y+1] = "x"
+                elseif y == j-1 then
+                    t[x][y-1] = "x"
+                end
+            end
+        end
+        return t
+    end
+
+    local function update_attacked(t)
+        for x = 1,8 do
+            for y = 1,8 do
+                if t[x][y] ~= nil or attacked[x][y] ~= nil then
+                    attacked[x][y] = "x"
+                end
+            end
+        end
+    end
+
+    -- generate attacked squares
+    for i = 1,8 do
+        for j = 1,8 do
+            if (string.match(FENarr[i][j], "[R]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[r]") and FEN[2] == "w") then
+                update_attacked(rook(i,j))
+            elseif (string.match(FENarr[i][j], "[B]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[b]") and FEN[2] == "w") then
+                update_attacked(bishop(i,j))
+            elseif (string.match(FENarr[i][j], "[N]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[n]") and FEN[2] == "w") then
+                update_attacked(knight(i,j))
+            elseif (string.match(FENarr[i][j], "[K]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[k]") and FEN[2] == "w") then
+                update_attacked(king(i,j))
+            end
+        end
+    end
+
+    for i = 1,8 do
+        for j = 1,8 do
+            --print(attacked[i][j])
+            if checking[i][j] ~= nil then
+                io.write("x ")
+            elseif attacked[i][j] ~= nil then
+                io.write("* ")
+            else
+                io.write(". ")
+            end
+        end
+        io.write('\n')
+    end
+    io.write("================\n")
+
+    -- Generate valid moves
+    local uci = {}
+    local move = ""
+
+    check = false
+    kingi = nil
+    kingj = nil
+
+    local function move_to_uci(x,y)
+        move = move:sub(1, 2) .. string.char(96+y) .. move:sub(4)
+        move = move:sub(1, 3) .. 9-x .. move:sub(5)
+        table.insert(uci, move)
+    end
+
+    local function gen_moves(t)
+        for x = 1,8 do
+            for y = 1,8 do
+                if check then
+                    if t[x][y] ~= nil and checking[x][y] ~= nil then
+                        move_to_uci(x,y)
+                    end
+                else
+                    if t[x][y] ~= nil then
+                        move_to_uci(x,y)
+                    end
+                end
+            end
+        end
+    end
+
+    local function king_moves(t)
+        for x = 1,8 do
+            for y = 1,8 do
+                if t[x][y] ~= nil and attacked[x][y] == nil then
+                    move_to_uci(x,y)
+                end
+            end
+        end
+    end
+
+    for i = 1,8 do
+        for j = 1,8 do
+            io.write(FENarr[i][j], " ")
+            move = move:sub(1, 0) .. string.char(96+j) .. move:sub(2)
+            move = move:sub(1, 1) .. 9-i .. move:sub(3)
+            if (string.match(FENarr[i][j], "[k]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[K]") and FEN[2] == "w") then
+                king_moves(king(i,j))
+                if attacked[i][j] ~= nil then
+                    check = true
+                    kingi = i
+                    kingj = j
+                end
+            elseif (string.match(FENarr[i][j], "[r]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[R]") and FEN[2] == "w") then
+                gen_moves(rook(i,j))
+            elseif (string.match(FENarr[i][j], "[n]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[N]") and FEN[2] == "w") then
+                gen_moves(knight(i,j))
+            end
+        end
+        io.write('\n')
+    end
+
+    if check then
+        --uci = {}
+        --move = move:sub(1, 0) .. string.char(96+kingj) .. move:sub(2)
+        --move = move:sub(1, 1) .. 9-kingi .. move:sub(3)
+        --king_moves(king(kingi,kingj))
+        --print(string.char(96+kingj), 9-kingi)
+    end
+
+    print(#uci)
+    for i = 1,#uci do
+        print(uci[i])
+    end
+
+    -- return all valid moves and their popularity in a table
+    return moves
+end
+
+
+--[[    idea about state        ]]--
+--[[
+local Piece = {}
+Piece.rook = { w, b, position, taken, attacked, pinned, checking }
+
+from FEN import Piece.rook
+
+iterate through fen and find all rooks, init the rooks with the correct state
+
+]]--
+
+
+function FEN(move)
+
+    local FEN = {}
+    for str in string.gmatch(board.fen, "([^".."%s".."]+)") do
+        table.insert(FEN, str)
+    end
+    local newboard = {}
+    for str in string.gmatch(FEN[1], "([^".."/".."]+)") do
+        table.insert(newboard, str)
+    end
+
+    local FENarr = {}
+    for i = 1,8 do
+        FENarr[i] = {}
+        for j = 1,#newboard[i] do
+            c = newboard[i]:sub(j,j)
+            if string.match(c, "[1,2,3,4,5,6,7,8]") then
+                for k = 1,tonumber(newboard[i]:sub(j,j)) do
+                    table.insert(FENarr[i], 1)
+                end
+            else
+                table.insert(FENarr[i], c)
+            end
+        end
+    end
+
+    FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(3,3))-96]
+    = FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96]
+    FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96] = 1
+
+    for i = 1,8 do
+        newboard[i] = ""
+        j = 1
+        repeat
+            n = 0
+            if FENarr[i][j] == 1 then
+                repeat
+                    n = n + 1
+                until FENarr[i][j+n] ~= 1
+                if j+n == 10 then
+                    n = n - 1
+                end
+                newboard[i] = newboard[i]..(n)
+                j = j + n - 1
+            else
+                newboard[i] = newboard[i]..FENarr[i][j]
+            end
+            j = j + 1
+        until j > 8
+    end
+
+    FEN[1] = ""
+    for i = 1,8 do
+        for j = 1,#newboard[i] do
+            FEN[1] = FEN[1]..newboard[i]:sub(j,j)
+        end
+        if i ~= 8 then
+            FEN[1] = FEN[1].."/"
+        end
+    end
+    if FEN[2] == "w" then
+        FEN[2] = "b"
+    else
+        FEN[2] = "w"
+        FEN[6] = FEN[6] + 1
+    end
+
+    board.fen = ""
+    for i = 1,6 do
+        board.fen = board.fen..FEN[i].." "
+    end
+    print(board.fen)
+end
+
+--FEN("e2e4")
+--FEN("c7c5")
+--FEN("b1c3")
+--FEN("d7d6")
+move()

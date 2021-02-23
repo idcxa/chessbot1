@@ -132,9 +132,41 @@ function database()
     res = http.request(rep)
     res_parsed = lunajson.decode(res)
     local moves = res_parsed["moves"]
+
+    local FEN = {}
+    for str in string.gmatch(board.fen, "([^".."%s".."]+)") do
+        table.insert(FEN, str)
+    end
+    local newboard = {}
+    for str in string.gmatch(FEN[1], "([^".."/".."]+)") do
+        table.insert(newboard, str)
+    end
+
+    local FENarr = {}
+    for i = 1,8 do
+        FENarr[i] = {}
+        for j = 1,#newboard[i] do
+            c = newboard[i]:sub(j,j)
+            if string.match(c, "[1,2,3,4,5,6,7,8]") then
+                for k = 1,tonumber(newboard[i]:sub(j,j)) do
+                    table.insert(FENarr[i], x)
+                end
+            else
+                table.insert(FENarr[i], c)
+            end
+        end
+    end
+
+    for i = 1,8 do
+        for j = 1,8 do
+            io.write(FENarr[i][j])
+        end
+        io.write('\n')
+    end
+
+
     return moves
     -- return all valid moves and their popularity in a table
-
 
 end
 
