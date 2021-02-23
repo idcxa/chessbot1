@@ -321,26 +321,31 @@ local function valid_moves()
 
     -- moves for pawn
     local function pawn(x, y, attack)
+        --checking = empty_array()
         local pawn = empty_array()
         -- many conditions
-        if FEN[2] == "w" then
+        if FENarr[x][y] == "p" then
             n = 1
         else
             n = -1
         end
 
-        if x - n ~= nil and x - n > 0 then
-            pawn[x-n][y] = true
-            if (x == 2 and FEN[2] == "b") or (x == 7 and FEN[2] == "w") then
-                pawn[x-2*n][y] = true
+        if x + n > 0 and x + n < 9 then
+            if FENarr[x+n][y] == nil then
+            pawn[x+n][y] = true
+                if (x == 2 and FEN[2] == "b") or (x == 7 and FEN[2] == "w") and FENarr[x+2*n][y] == nil then
+                    pawn[x+2*n][y] = true
+                end
             end
-        end
 
-        if x ~= 8 and y > 1 and (attack or (string.match(FENarr[x+n][y-1], "[r,n,b,q,k]") and FENarr[x][y] == "P") or (string.match(FENarr[x+n][y-1], "[R,N,B,Q,K]") and FENarr[x][y] == "p")) then
-            pawn[x+n][y-1] = true
-        end
-        if x ~= 8 and y < 8 and (attack or (string.match(FENarr[x+n][y+1], "[r,n,b,q,k]") and FENarr[x][y] == "P") or (string.match(FENarr[x+n][y+1], "[R,N,B,Q,K]") and FENarr[x][y] == "p")) then
-            pawn[x+n][y+1] = true
+            if x ~= 8 and y > 1 and (attack or (string.match(FENarr[x+n][y-1], "[r,n,b,q,k]") and FENarr[x][y] == "P") or (string.match(FENarr[x+n][y-1], "[R,N,B,Q,K]") and FENarr[x][y] == "p")) then
+                pawn[x+n][y-1] = true
+                print(x, y)
+                print(x+n, y-1)
+            end
+            if x ~= 8 and y < 8 and (attack or (string.match(FENarr[x+n][y+1], "[r,n,b,q,k]") and FENarr[x][y] == "P") or (string.match(FENarr[x+n][y+1], "[R,N,B,Q,K]") and FENarr[x][y] == "p")) then
+                pawn[x+n][y+1] = true
+            end
         end
 
         return pawn
@@ -395,7 +400,6 @@ local function valid_moves()
         end
     end
 
-    --[[
 
     for i = 1,8 do
     for j = 1,8 do
@@ -411,7 +415,6 @@ local function valid_moves()
     io.write('\n')
     end
     io.write("================\n")
-    ]]--
 
     -- Generate valid moves
     local uci = {}
@@ -466,7 +469,6 @@ local function valid_moves()
         end
     end
 
-    --[[
     for i = 1,8 do
     for j = 1,8 do
     io.write(FENarr[i][j], " ")
@@ -474,7 +476,6 @@ local function valid_moves()
     io.write('\n')
     end
     print("================")
-    ]]--
 
     -- get valid moves for each piece in each position in FENarr
     for i = 1,8 do
@@ -497,7 +498,6 @@ local function valid_moves()
         end
     end
 
-    --[[
     for i = 1,8 do
     for j = 1,8 do
     --print(attacked[i][j])
@@ -512,10 +512,10 @@ local function valid_moves()
     io.write('\n')
     end
     io.write("================\n")
-    --]]
 
     local moves = {}
     for i = 1,#uci do
+        print(uci[i])
         local t = {}
         t["white"] = 0
         t["averageRating"] = 0
@@ -541,7 +541,7 @@ local function database()
     res_parsed = lunajson.decode(res)
     local moves = res_parsed["moves"]
 
-    if #moves < 5 then
+    if #moves == 0 or moves[1]["white"] + moves[1]["draws"] + moves[1]["black"] < 2 then
         moves = valid_moves()
     end
 
@@ -552,7 +552,7 @@ end
 function move()
     moves = database()
     print(#moves)
-    print(board.moves)
+    --print(board.moves)
     sum = 0
     for i = 1,#moves do
         n = 0
@@ -648,12 +648,11 @@ function fen(move)
     for i = 1,6 do
         board.fen = board.fen..FEN[i].." "
     end
-    print(board.fen)
+    --print(board.fen)
 end
 
-str = "e2e4 c7c5 b1c3 d7d6 f2f4 g8f6 g1f3 b8c6 f1b5 c8d7 d2d3 a7a6 b5c6 a8b8 c6d7 e8d7 c3a4 b8a8 a4b6"
+str = "e2e4 e7e6 d2d4 d7d5 b1c3 f8b4 a2a3 b4c3 b2c3 g8f6 e4d5 d8d5 c1g5 b8d7 d1f3 a8b8 f3d5 f6g8 d5d7 e8f8 d7e7 g8e7 g5e7 f8e7 e1c1 b8a8 g1f3 h8g8 f3e5 g8f8 e5g6 h7g6 f1a6 f8h8 a6b7 a8b8 b7c8 b8a8 c8e6 h8h7 e6f7 a8e8 f7g6 e8a8 g6h7 e7e8 d1e1 e8f8 e1e4 a8b8 h1e1 b8d8 h7g6 d8a8 e4e8"
 for s in string.gmatch(str, "([^".."%s".."]+)") do
-    print(s)
     board.moves = board.moves..s..","
     fen(s)
 end

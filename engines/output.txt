@@ -1,0 +1,7 @@
+INPUT:uci
+info string id author Izzy Cassell
+uciok
+INPUT:isready
+readyok
+INPUT:position fen 1r3r1k/6pp/3p4/q2N3b/2B1p2b/1PP1NnP1/2Q2PKP/R7 w - - 0 26
+INPUT:go
