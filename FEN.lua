@@ -6,7 +6,7 @@ local lunajson = require("lunajson")
 
 board = {}
 board.startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-board.fen = board.startpos
+--board.fen = board.startpos
 board.moves = ""
 
 local function empty_array()
@@ -110,15 +110,43 @@ local function valid_moves()
                                 if j ~= 0 then
                                     local_attacked[j][y] = nil
                                     rook[j][y] = nil
-
                                 end
                             end
                             for _it,v in range(1,x) do
-                                --checking[v][y] = nil
+                                checking[v][y] = nil
                             end
                         elseif k > x then
                             -- bottom
                             return
+                        end
+
+                    end
+                    -- if enemy king
+                    if (string.match(FENarr[k][v[i]], "[K]") and string.match(FENarr[x][y], "[r,q]")) or (string.match(FENarr[k][v[i]], "[k]") and string.match(FENarr[x][y], "[R,Q]"))  then
+                        checking[x][y] = true
+
+                        if v[i] < y then
+                            -- left side of rook
+                            for _it,v in range(v[i],y) do
+                                checking[x][v] = true
+                            end
+                        elseif v[i] > y then
+                            -- right
+                            checking[k][v[i]] = true
+                        end
+
+                        if k < x then
+                            -- top side of rook
+                            for _it,j in range(0,k-1) do
+                                if j ~= 0 then
+                                    local_attacked[j][y] = nil
+                                    rook[j][y] = nil
+
+                                end
+                            end
+                        elseif k > x then
+                            -- bottom
+                            checking[k][v[i]] = true
                         end
                     end
                 end
@@ -136,118 +164,120 @@ local function valid_moves()
         return rook
     end
 
+
     --moves for bishop
     local function bishop(x,y)
-        -- do not go any further
         local bishop = empty_array()
-        bishop [x] = {}
-        for i = 1,8 do
-            for j = 1,8 do
-                if i + y == j + x or i == -j + x + y then
-                    bishop[i][j] = true
+
+        local t = {}
+        for _it, i in range(8) do
+            t[i] = {}
+            for _it, j in range(8) do
+                if (i ~= x and j ~= y) and (i + y == j + x or i == -j + x + y) then
+                    table.insert(t[i], j)
                 end
             end
         end
-        for i = 1,8 do
-            for j = 1,8 do
-                if string.match(FENarr[i][j], "[r,n,b,q,p,R,N,B,Q,P]") or (string.match(FENarr[i][j], "[k]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[K]") and FEN[2] == "w") then
-                    if i + y == j + x then
-                        if (string.match(FENarr[x][i], "[r,n,b,q,p]") and string.match(FENarr[x][y], "[b,q]")) or (string.match(FENarr[x][i], "[R,N,B,Q,P]") and string.match(FENarr[x][y], "[B,Q]")) then
 
-                            bishop[i][j] = nil
-                            attacked[i][j] = true
-                            attacked[x][y] = nil
-                        end
-                        if i < x then
-                            for k = 1,8 do
-                                for p = 1,j-1 do
-                                    if k + y == p + x then
-                                        bishop[k][p] = nil
-                                    end
-                                end
-                            end
-                        elseif i > x then
-                            for k = 1,8 do
-                                for p = j+1,8 do
-                                    if k + y == p + x then
-                                        bishop[k][p] = nil
-                                    end
-                                end
-                            end
-                        end
-                    elseif  i - x == y - j then
-                        if (string.match(FENarr[x][i], "[r,n,b,q,p]") and string.match(FENarr[x][y], "[b,q]")) or (string.match(FENarr[x][i], "[R,N,B,Q,P]") and string.match(FENarr[x][y], "[B,Q]")) then
-                            bishop[i][j] = nil
-                            attacked[i][j] = true
-                            attacked[x][y] = nil
-                        end
-                        if i < x then
-                            for k = 1,8 do
-                                for p = j+1,8 do
-                                    if k - x == y - p then
-                                        bishop[k][p] = nil
-                                    end
-                                end
-                            end
-                        elseif i > x then
-                            for k = 1,8 do
-                                for p = 1,j-1 do
-                                    if k - x == y - p then
-                                        bishop[k][p] = nil
-                                    end
-                                end
-                            end
+        local bnil = empty_array()
+        for k,v in pairs(t) do
+            for i = 1,#v do
+                --print(k,v[i])
+                bishop[k][v[i]] = true
+                if (string.match(FENarr[k][v[i]], "[r,n,b,q,p,k,R,N,B,Q,P]") and string.match(FENarr[x][y], "[b,q]")) or (string.match(FENarr[k][v[i]], "[r,n,b,q,p,R,N,B,Q,P,K]") and string.match(FENarr[x][y], "[B,Q]")) then
+                    if (string.match(FENarr[k][v[i]], "[r,n,b,q,p,k]") and string.match(FENarr[x][y], "[b,q]")) or (string.match(FENarr[k][v[i]], "[R,N,B,Q,P,K]") and string.match(FENarr[x][y], "[B,Q]")) then
+                        bnil[k][v[i]] = true
+                        attacked[k][v[i]] = true
+                    end
 
+                    local function wipe_squares(n)
+                        -- left
+                        if v[i] < y then
+                            for p = 1,v[i]-1 do
+                                bnil[n][p] = true
+                                --checking[n][p] = nil
+                            end
+                            -- right
+                        elseif v[i] > y then
+                            for p = v[i]+1,8 do
+                                bnil[n][p] = true
+                                --checking[n][p] = nil
+                            end
                         end
                     end
+
+                    -- if on top
+                    if k < x then
+                        for n = 1,k-1 do
+                            wipe_squares(n)
+                        end
+                        -- if underneath
+                    elseif k > x then
+                        for n = k+1,8 do
+                            wipe_squares(n)
+                        end
+                    end
+
+
+                elseif (string.match(FENarr[k][v[i]], "[K]") and string.match(FENarr[x][y], "[b,q]")) or (string.match(FENarr[k][v[i]], "[k]") and string.match(FENarr[x][y], "[B,Q]"))  then
+                    --checking[x][y] = true
+                    -- if on top
+                    if k < x then
+                        -- left
+                        if v[i] < y then
+                            for n = k,8 do
+                                for p = v[i], y do
+                                    if n == p + x - y then
+                                        checking[n][p] = true
+                                    end
+                                end
+                            end
+                            -- right
+                        elseif v[i] > y then
+                            for n = k,x do
+                                for p = y,v[i] do
+                                    if n == -p + x + y then
+                                        checking[n][p] = true
+                                    end
+                                end
+                            end
+                        end
+                    -- if underneath
+                    elseif k > x then
+                        -- left
+                        if v[i] < y then
+                            for n = x,k do
+                                for p = v[i], y do
+                                    if n == -p + x + y then
+                                        checking[n][p] = true
+                                    end
+                                end
+                            end
+                            -- right
+                        elseif v[i] > y then
+                            for n = x,k do
+                                for p = y,v[i] do
+                                    if n == p + x - y then
+                                        checking[n][p] = true
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    checking[k][v[i]] = nil
                 end
             end
         end
+
         for i = 1,8 do
             for j = 1,8 do
-                if (string.match(FENarr[i][j], "[k]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[K]") and FEN[2] == "w") then
-                    if bishop[i][j] ~= nil and i + y == j + x then
-                        if i < x then
-                            for k = 1,8 do
-                                for p = j+1,y do
-                                    if k + y == p + x then
-                                        checking[k][p] = true
-                                    end
-                                end
-                            end
-                        else
-                            for k = 1,8 do
-                                for p = y,j-1 do
-                                    if k + y == p + x then
-                                        checking[k][p] = true
-                                    end
-                                end
-                            end
-                        end
-                    elseif bishop[i][j] ~= nil and i - x == y - j then
-                        if i < x then
-                            for k = 1,8 do
-                                for p = y,j-1 do
-                                    if k - x == y - p then
-                                        checking[k][p] = true
-                                    end
-                                end
-                            end
-                        else
-                            for k = 1,8 do
-                                for p = j+1,y do
-                                    if k - x == y - p then
-                                        checking[k][p] = true
-                                    end
-                                end
-                            end
-                        end
-                        attackers = attackers + 1
-                    end
+                if bnil[i][j] ~= nil then
+                    bishop[i][j] = nil
                 end
             end
         end
-        bishop[x][y] = nil
+
+        --bishop[x][y] = nil
         return bishop
     end
 
@@ -265,6 +295,22 @@ local function valid_moves()
                 end
             end
         end
+
+        local function castling(x, y)
+            cstl_k, cstl_q = false, false
+            for i = x - 2, x - 1 do
+                if (string.match(FENarr[x][y], "[k,r]")) then
+                    cstl_k = true
+                    king[i][j] = nil
+                end
+            end
+            for i = x + 2, x + 1 do
+                if (string.match(FENarr[x][y], "[r,k]")) then
+                    cstl_q = true
+                end
+            end
+        end
+
         king[x][y] = nil
         return king
     end
@@ -332,7 +378,7 @@ local function valid_moves()
 
         if x + n > 0 and x + n < 9 then
             if FENarr[x+n][y] == nil then
-            pawn[x+n][y] = true
+                pawn[x+n][y] = true
                 if (x == 2 and FEN[2] == "b") or (x == 7 and FEN[2] == "w") and FENarr[x+2*n][y] == nil then
                     pawn[x+2*n][y] = true
                 end
@@ -340,8 +386,6 @@ local function valid_moves()
 
             if x ~= 8 and y > 1 and (attack or (string.match(FENarr[x+n][y-1], "[r,n,b,q,k]") and FENarr[x][y] == "P") or (string.match(FENarr[x+n][y-1], "[R,N,B,Q,K]") and FENarr[x][y] == "p")) then
                 pawn[x+n][y-1] = true
-                print(x, y)
-                print(x+n, y-1)
             end
             if x ~= 8 and y < 8 and (attack or (string.match(FENarr[x+n][y+1], "[r,n,b,q,k]") and FENarr[x][y] == "P") or (string.match(FENarr[x+n][y+1], "[R,N,B,Q,K]") and FENarr[x][y] == "p")) then
                 pawn[x+n][y+1] = true
@@ -402,17 +446,17 @@ local function valid_moves()
 
 
     for i = 1,8 do
-    for j = 1,8 do
-    --print(attacked[i][j])
-    if checking[i][j] ~= nil then
-    io.write("x ")
-    elseif attacked[i][j] ~= nil then
-    io.write("* ")
-    else
-    io.write(". ")
-    end
-    end
-    io.write('\n')
+        for j = 1,8 do
+            --print(attacked[i][j])
+            if checking[i][j] ~= nil then
+                io.write("x ")
+            elseif attacked[i][j] ~= nil then
+                io.write("* ")
+            else
+                io.write(". ")
+            end
+        end
+        io.write('\n')
     end
     io.write("================\n")
 
@@ -470,13 +514,12 @@ local function valid_moves()
     end
 
     for i = 1,8 do
-    for j = 1,8 do
-    io.write(FENarr[i][j], " ")
-    end
-    io.write('\n')
+        for j = 1,8 do
+            io.write(FENarr[i][j], " ")
+        end
+        io.write('\n')
     end
     print("================")
-
     -- get valid moves for each piece in each position in FENarr
     for i = 1,8 do
         for j = 1,8 do
@@ -499,21 +542,22 @@ local function valid_moves()
     end
 
     for i = 1,8 do
-    for j = 1,8 do
-    --print(attacked[i][j])
-    if checking[i][j] ~= nil then
-    io.write("x ")
-    elseif attacked[i][j] ~= nil then
-    io.write("* ")
-    else
-    io.write(". ")
-    end
-    end
-    io.write('\n')
+        for j = 1,8 do
+            --print(attacked[i][j])
+            if checking[i][j] ~= nil then
+                io.write("x ")
+            elseif attacked[i][j] ~= nil then
+                io.write("* ")
+            else
+                io.write(". ")
+            end
+        end
+        io.write('\n')
     end
     io.write("================\n")
 
     local moves = {}
+    print(#uci)
     for i = 1,#uci do
         print(uci[i])
         local t = {}
@@ -532,11 +576,12 @@ end
 
 
 local function database()
-    --print(board.fen)
+    print(board.startpos)
+    print("")
     --[[ Function to return values from json body ]]--
     --[[ turn board.fen into http valid link ]]--
     rep = "https://explorer.lichess.ovh/lichess?variant=standard&speeds[]=bullet&speeds[]=blitz&speeds[]=rapid&speeds[]=classical&ratings[]=1600&ratings[]=1800&ratings[]=2000&ratings[]=2200&ratings[]=2500&moves=50&play="..board.moves.."&fen="..string.gsub(board.startpos, "%s+", "%%20")
-    --print(rep)
+    print(rep, '\n')
     res = http.request(rep)
     res_parsed = lunajson.decode(res)
     local moves = res_parsed["moves"]
@@ -551,8 +596,9 @@ end
 
 function move()
     moves = database()
-    print(#moves)
+    --print(#moves)
     --print(board.moves)
+    --print("Hi")
     sum = 0
     for i = 1,#moves do
         n = 0
@@ -574,10 +620,12 @@ function move()
         end
     end
     r = math.random(#moves)
+    print(#moves)
     return "bestmove "..moves[r]["uci"]
 end
 
 function fen(move)
+    print(move)
 
     local FEN = {}
     for str in string.gmatch(board.fen, "([^".."%s".."]+)") do
@@ -603,10 +651,29 @@ function fen(move)
         end
     end
 
-    FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(3,3))-96]
-    = FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96]
+    local p = FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96]
+    if p == "K" or p == "k" then
+        n = string.byte(move:sub(3,3)) - string.byte(move:sub(1,1))
+        if n == -2 then
+            FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(1,1))-97] = FENarr[9-tonumber(move:sub(4,4))][1]
+            FENarr[9-tonumber(move:sub(4,4))][1] = 1
+        elseif n == 2 then
+            FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(1,1))-95] = FENarr[9-tonumber(move:sub(4,4))][8]
+            FENarr[9-tonumber(move:sub(4,4))][8] = 1
+        end
+    end
+
+    FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(3,3))-96]= p
     FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96] = 1
 
+
+
+    for i = 1,8 do
+        newboard[i] = ""
+        for j = 1,8 do
+            newboard[i] = newboard[i]..FENarr[i][j]
+        end
+    end
     for i = 1,8 do
         newboard[i] = ""
         j = 1
@@ -651,15 +718,18 @@ function fen(move)
     --print(board.fen)
 end
 
-str = "e2e4 e7e6 d2d4 d7d5 b1c3 f8b4 a2a3 b4c3 b2c3 g8f6 e4d5 d8d5 c1g5 b8d7 d1f3 a8b8 f3d5 f6g8 d5d7 e8f8 d7e7 g8e7 g5e7 f8e7 e1c1 b8a8 g1f3 h8g8 f3e5 g8f8 e5g6 h7g6 f1a6 f8h8 a6b7 a8b8 b7c8 b8a8 c8e6 h8h7 e6f7 a8e8 f7g6 e8a8 g6h7 e7e8 d1e1 e8f8 e1e4 a8b8 h1e1 b8d8 h7g6 d8a8 e4e8"
+str = "e2e4 c7c5 b1c3 b8c6 f1b5 e7e6 b5c6 b7c6 f2f4 d7d5 e4d5 c6d5 d2d4 g8f6 g1f3 c5d4 f3d4 f8d6 e1g1 e8g8 d4c6 d6c5 g1h1 a8b8 c6d8 b8a8 d8f7 a8b8 f7g5 b8a8 d1h5 a8b8 h5h7"
 for s in string.gmatch(str, "([^".."%s".."]+)") do
-    board.moves = board.moves..s..","
-    fen(s)
+    --board.moves = board.moves..s..","
+    --fen(s)
 end
+--print(move())
+--board.fen = "8/2k3k1/8/4B3/8/2k3k1/8/8 b - - 0 1"
+---fen("e1g1")
 
 
 --fen("e2e4")
 --fen("c7c5")
 --fen("b1c3")
 --fen("d7d6")
-print(move())
+--print(move())

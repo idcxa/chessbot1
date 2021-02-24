@@ -68,24 +68,28 @@ function loop()
             file:write("readyok\n")
         elseif cmd[1] == "position" then
             if cmd[2] == "startpos" then
-                board.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                board.startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
                 --print("info string ", cmd[4], cmd[5], cmd[6])
                 --print("info string ", FEN.fenstr_move(board.fen, cmd[4]))
             end
             if cmd[2] == "fen" then
                 board.fen = ""
+                board.startpos = ""
                 for i = 3,#cmd do
-                    board.fen = board.fen..cmd[i]
+                    board.startpos = board.startpos..cmd[i].." "
+                    board.fen = board.fen..cmd[i].." "
                 end
             end
-            if cmd[3] == "moves" then
-                board.moves = ""
-                for i = 4,#cmd do
-                    board.moves = board.moves..cmd[i]..","
-                    fen(cmd[i])
+            for n = 1,#cmd do
+                if cmd[n] == "moves" then
+                    board.moves = ""
+                    for i = n+1,#cmd do
+                        board.moves = board.moves..cmd[i]..","
+                        fen(cmd[i])
+                    end
+                    file:write(board.fen, "\n")
+                    print("info string ", board.fen)
                 end
-                file:write(board.fen, "\n")
-                print("info string ", board.fen)
             end
         end
         if cmd[1] == "go" then
