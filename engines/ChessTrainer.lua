@@ -69,6 +69,7 @@ function loop()
         elseif cmd[1] == "position" then
             if cmd[2] == "startpos" then
                 board.startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                board.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
                 --print("info string ", cmd[4], cmd[5], cmd[6])
                 --print("info string ", FEN.fenstr_move(board.fen, cmd[4]))
             end

@@ -6,7 +6,7 @@ local lunajson = require("lunajson")
 
 board = {}
 board.startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
---board.fen = board.startpos
+board.fen = board.startpos
 board.moves = ""
 
 local function empty_array()
@@ -50,6 +50,7 @@ local function FENtoarr()
 end
 
 local function valid_moves()
+    --print(board.fen)
 
     local FENarr = FENtoarr()
     local attackers = 0
@@ -351,7 +352,7 @@ local function valid_moves()
             for i = 1,#v do
                 knight[k][v[i]] = true
                 -- if piece is same colour
-                if (string.match(FENarr[k][v[i]], "[r,n,b,q,p]") and FENarr[x][y] == "n") or (string.match(FENarr[k][v[i]], "[R,N,B,Q,P]") and FENarr[x][y] == "N") then
+                if (string.match(FENarr[k][v[i]], "[r,n,b,q,p,k]") and FENarr[x][y] == "n") or (string.match(FENarr[k][v[i]], "[R,N,B,Q,P,K]") and FENarr[x][y] == "N") then
                     knight[k][v[i]] = nil
                     attacked[k][v[i]] = true
                 end
@@ -367,7 +368,6 @@ local function valid_moves()
 
     -- moves for pawn
     local function pawn(x, y, attack)
-        --checking = empty_array()
         local pawn = empty_array()
         -- many conditions
         if FENarr[x][y] == "p" then
@@ -377,9 +377,9 @@ local function valid_moves()
         end
 
         if x + n > 0 and x + n < 9 then
-            if FENarr[x+n][y] == nil then
+            if FENarr[x+n][y] ~= true then
                 pawn[x+n][y] = true
-                if (x == 2 and FEN[2] == "b") or (x == 7 and FEN[2] == "w") and FENarr[x+2*n][y] == nil then
+                if (x == 2 and FEN[2] == "b") or (x == 7 and FEN[2] == "w") and FENarr[x+2*n][y] ~= true then
                     pawn[x+2*n][y] = true
                 end
             end
@@ -445,6 +445,7 @@ local function valid_moves()
     end
 
 
+    --[[
     for i = 1,8 do
         for j = 1,8 do
             --print(attacked[i][j])
@@ -459,6 +460,7 @@ local function valid_moves()
         io.write('\n')
     end
     io.write("================\n")
+    --]]
 
     -- Generate valid moves
     local uci = {}
@@ -513,6 +515,8 @@ local function valid_moves()
         end
     end
 
+    --[[
+
     for i = 1,8 do
         for j = 1,8 do
             io.write(FENarr[i][j], " ")
@@ -520,15 +524,17 @@ local function valid_moves()
         io.write('\n')
     end
     print("================")
+    ]]--
+
     -- get valid moves for each piece in each position in FENarr
     for i = 1,8 do
         for j = 1,8 do
             move = move:sub(1, 0) .. string.char(96+j) .. move:sub(2)
             move = move:sub(1, 1) .. 9-i .. move:sub(3)
             if (string.match(FENarr[i][j], "[k]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[K]") and FEN[2] == "w") then
-                king_moves(king(i,j))
+                --king_moves(king(i,j))
             elseif (string.match(FENarr[i][j], "[r]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[R]") and FEN[2] == "w") then
-                gen_moves(rook(i,j))
+                --gen_moves(rook(i,j))
             elseif (string.match(FENarr[i][j], "[n]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[N]") and FEN[2] == "w") then
                 gen_moves(knight(i,j))
             elseif (string.match(FENarr[i][j], "[b]") and FEN[2] == "b") or (string.match(FENarr[i][j], "[B]") and FEN[2] == "w") then
@@ -540,6 +546,7 @@ local function valid_moves()
             end
         end
     end
+    --[[
 
     for i = 1,8 do
         for j = 1,8 do
@@ -555,11 +562,12 @@ local function valid_moves()
         io.write('\n')
     end
     io.write("================\n")
+    ]]--
 
     local moves = {}
-    print(#uci)
+    print(board.moves, #uci)
     for i = 1,#uci do
-        print(uci[i])
+        --print(uci[i])
         local t = {}
         t["white"] = 0
         t["averageRating"] = 0
@@ -576,25 +584,36 @@ end
 
 
 local function database()
+    print(board.moves)
     --print(board.startpos)
     --print("")
     --[[ Function to return values from json body ]]--
     --[[ turn board.fen into http valid link ]]--
     rep = "https://explorer.lichess.ovh/lichess?variant=standard&speeds[]=bullet&speeds[]=blitz&speeds[]=rapid&speeds[]=classical&ratings[]=1600&ratings[]=1800&ratings[]=2000&ratings[]=2200&ratings[]=2500&moves=50&play="..board.moves.."&fen="..string.gsub(board.startpos, "%s+", "%%20")
     --print(rep, '\n')
+
+    local res_parsed
     res = http.request(rep)
-    res_parsed = lunajson.decode(res)
-    local moves = res_parsed["moves"]
+
+    local function sleep(n)
+      os.execute("sleep " .. tonumber(n/1000))
+    end
+    --sleep(800)
+    --res_parsed = lunajson.decode(res)
+
+    local moves = {}
+    --local moves = res_parsed["moves"]
 
     if #moves == 0 or moves[1]["white"] + moves[1]["draws"] + moves[1]["black"] < 2 then
-        moves = valid_moves()
     end
+        moves = valid_moves()
 
     -- return valid moves and their popularity in a table
     return moves
 end
 
 function move()
+    --print(board.fen)
     moves = database()
     --print(#moves)
     --print(board.moves)
@@ -614,114 +633,145 @@ function move()
         --print(moves[i]["san"], moves[i]["total"])
         if moves[i]["total"] > r then
             --print("info string", sum)
-            return "bestmove "..moves[i]["uci"]
+            return moves
+            --return "bestmove "..moves[i]["uci"]
         else
             r = r - moves[i]["total"]
         end
     end
     r = math.random(#moves)
-    print(#moves)
-    return "bestmove "..moves[r]["uci"]
+    return moves
+    --return "bestmove "..moves[r]["uci"]
 end
 
-function fen(move)
-    print(move)
+function fen(str)
 
-    local FEN = {}
-    for str in string.gmatch(board.fen, "([^".."%s".."]+)") do
-        table.insert(FEN, str)
-    end
-    local newboard = {}
-    for str in string.gmatch(FEN[1], "([^".."/".."]+)") do
-        table.insert(newboard, str)
-    end
+    for move in string.gmatch(str, "([^"..",".."]+)") do
+        --print(move)
 
-    local FENarr = {}
-    for i = 1,8 do
-        FENarr[i] = {}
-        for j = 1,#newboard[i] do
-            c = newboard[i]:sub(j,j)
-            if string.match(c, "[1,2,3,4,5,6,7,8]") then
-                for k = 1,tonumber(newboard[i]:sub(j,j)) do
-                    table.insert(FENarr[i], 1)
+        local FEN = {}
+        for str in string.gmatch(board.fen, "([^".."%s".."]+)") do
+            table.insert(FEN, str)
+        end
+        local newboard = {}
+        for str in string.gmatch(FEN[1], "([^".."/".."]+)") do
+            table.insert(newboard, str)
+        end
+
+        local FENarr = {}
+        for i = 1,8 do
+            FENarr[i] = {}
+            for j = 1,#newboard[i] do
+                c = newboard[i]:sub(j,j)
+                if string.match(c, "[1,2,3,4,5,6,7,8]") then
+                    for k = 1,tonumber(newboard[i]:sub(j,j)) do
+                        table.insert(FENarr[i], 1)
+                    end
+                else
+                    table.insert(FENarr[i], c)
                 end
-            else
-                table.insert(FENarr[i], c)
             end
         end
-    end
 
-    local p = FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96]
-    if p == "K" or p == "k" then
-        n = string.byte(move:sub(3,3)) - string.byte(move:sub(1,1))
-        if n == -2 then
-            FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(1,1))-97] = FENarr[9-tonumber(move:sub(4,4))][1]
-            FENarr[9-tonumber(move:sub(4,4))][1] = 1
-        elseif n == 2 then
-            FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(1,1))-95] = FENarr[9-tonumber(move:sub(4,4))][8]
-            FENarr[9-tonumber(move:sub(4,4))][8] = 1
+        local p = FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96]
+        if p == "K" or p == "k" then
+            n = string.byte(move:sub(3,3)) - string.byte(move:sub(1,1))
+            if n == -2 then
+                FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(1,1))-97] = FENarr[9-tonumber(move:sub(4,4))][1]
+                FENarr[9-tonumber(move:sub(4,4))][1] = 1
+            elseif n == 2 then
+                FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(1,1))-95] = FENarr[9-tonumber(move:sub(4,4))][8]
+                FENarr[9-tonumber(move:sub(4,4))][8] = 1
+            end
         end
-    end
 
-    FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(3,3))-96]= p
-    FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96] = 1
-
+        FENarr[9-tonumber(move:sub(4,4))][string.byte(move:sub(3,3))-96]= p
+        FENarr[9-tonumber(move:sub(2,2))][string.byte(move:sub(1,1))-96] = 1
 
 
-    for i = 1,8 do
-        newboard[i] = ""
-        for j = 1,8 do
-            newboard[i] = newboard[i]..FENarr[i][j]
-        end
-    end
-    for i = 1,8 do
-        newboard[i] = ""
-        j = 1
-        repeat
-            n = 0
-            if FENarr[i][j] == 1 then
-                repeat
-                    n = n + 1
-                until FENarr[i][j+n] ~= 1
-                if j+n == 10 then
-                    n = n - 1
-                end
-                newboard[i] = newboard[i]..(n)
-                j = j + n - 1
-            else
+
+        for i = 1,8 do
+            newboard[i] = ""
+            for j = 1,8 do
                 newboard[i] = newboard[i]..FENarr[i][j]
             end
-            j = j + 1
-        until j > 8
-    end
-
-    FEN[1] = ""
-    for i = 1,8 do
-        for j = 1,#newboard[i] do
-            FEN[1] = FEN[1]..newboard[i]:sub(j,j)
         end
-        if i ~= 8 then
-            FEN[1] = FEN[1].."/"
+        for i = 1,8 do
+            newboard[i] = ""
+            j = 1
+            repeat
+                n = 0
+                if FENarr[i][j] == 1 then
+                    repeat
+                        n = n + 1
+                    until FENarr[i][j+n] ~= 1
+                    if j+n == 10 then
+                        n = n - 1
+                    end
+                    newboard[i] = newboard[i]..(n)
+                    j = j + n - 1
+                else
+                    newboard[i] = newboard[i]..FENarr[i][j]
+                end
+                j = j + 1
+            until j > 8
         end
-    end
-    if FEN[2] == "w" then
-        FEN[2] = "b"
-    else
-        FEN[2] = "w"
-        FEN[6] = FEN[6] + 1
-    end
 
-    board.fen = ""
-    for i = 1,6 do
-        board.fen = board.fen..FEN[i].." "
+        FEN[1] = ""
+        for i = 1,8 do
+            for j = 1,#newboard[i] do
+                FEN[1] = FEN[1]..newboard[i]:sub(j,j)
+            end
+            if i ~= 8 then
+                FEN[1] = FEN[1].."/"
+            end
+        end
+        if FEN[2] == "w" then
+            FEN[2] = "b"
+        else
+            FEN[2] = "w"
+            FEN[6] = FEN[6] + 1
+        end
+
+        board.fen = ""
+        for i = 1,6 do
+            board.fen = board.fen..FEN[i].." "
+        end
+        --print(board.fen)
     end
-    --print(board.fen)
 end
 
-str = "e2e4 c7c5 b1c3 b8c6 f1b5 e7e6 b5c6 b7c6 f2f4 d7d5 e4d5 c6d5 d2d4 g8f6 g1f3 c5d4 f3d4 f8d6 e1g1 e8g8 d4c6 d6c5 g1h1 a8b8 c6d8 b8a8 d8f7 a8b8 f7g5 b8a8 d1h5 a8b8 h5h7"
+str = "f2f4 d7d5 b1c3 g8f6 e2e3 c8f5 f1d3 e7e6 d3f5"
 for s in string.gmatch(str, "([^".."%s".."]+)") do
     --board.moves = board.moves..s..","
     --fen(s)
+end
+
+function count_moves(mv, depth)
+    if depth == 0 then
+        return 0
+    end
+    local sum = 0
+    local t = move()
+    --print(#moves)
+
+    local y = os.clock()
+    for i = 1,#t do
+        board.moves = ""
+        board.fen = board.startpos
+
+            board.moves = mv..t[i]["uci"]
+            fen(board.moves)
+            local x = os.clock()
+            b = move()
+        print(string.format("elapsed time: %.2f\n", (os.clock() - x)*10))
+        --print(#b)
+        sum = sum + #b
+        sum = sum + count_moves(board.moves..",", depth-1)
+    end
+    print(string.format("elapsed time: %.2f\n", (os.clock() - y)*10))
+    print(sum)
+    return sum
 end
 --print(move())
 --board.fen = "8/2k3k1/8/4B3/8/2k3k1/8/8 b - - 0 1"
@@ -732,4 +782,8 @@ end
 --fen("c7c5")
 --fen("b1c3")
 --fen("d7d6")
+
+--fen("b2b4")
 --print(move())
+
+count_moves("", 1)
