@@ -2,13 +2,7 @@ import requests
 from urllib.parse import urljoin
 from requests.exceptions import ConnectionError, HTTPError, ReadTimeout
 from urllib3.exceptions import ProtocolError
-
-try:
-    from http.client import RemoteDisconnected
-    # New in version 3.5: Previously, BadStatusLine('') was raised.
-except ImportError:
-    from http.client import BadStatusLine as RemoteDisconnected
-
+from http.client import RemoteDisconnected
 import backoff
 
 ENDPOINTS = {
@@ -58,7 +52,7 @@ class Lichess:
                           max_time=60,
                           interval=0.1,
                           giveup=is_final)
-    def api_post(self, path, data=None, headers=None):        
+    def api_post(self, path, data=None, headers=None):
         url = urljoin(self.baseUrl, path)
         response = self.session.post(url, data=data, headers=headers, timeout=2)
         response.raise_for_status()
@@ -91,8 +85,8 @@ class Lichess:
     def accept_challenge(self, challenge_id):
         return self.api_post(ENDPOINTS["accept"].format(challenge_id))
 
-    def decline_challenge(self, challenge_id, reason = "generic"):
-        return self.api_post(ENDPOINTS["decline"].format(challenge_id), data=f"reason={reason}", headers={"Content-Type":"application/x-www-form-urlencoded"})
+    def decline_challenge(self, challenge_id, reason="generic"):
+        return self.api_post(ENDPOINTS["decline"].format(challenge_id), data=f"reason={reason}", headers={"Content-Type": "application/x-www-form-urlencoded"})
 
     def get_profile(self):
         profile = self.api_get(ENDPOINTS["profile"])
