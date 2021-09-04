@@ -1,0 +1,6 @@
+[submodule "engines/--force"]
+	path = engines/--force
+	url = git@gitlab.com:izzuishere/ctengine-rs.git
+[submodule "engines/ctengine-rs"]
+	path = engines/ctengine-rs
+	url = git@gitlab.com:izzuishere/ctengine-rs.git
