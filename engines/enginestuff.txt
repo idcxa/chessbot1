@@ -1,0 +1,2 @@
+input: position startpos moves e2e4 e7e5
+input: go
