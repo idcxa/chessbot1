@@ -36,6 +36,9 @@ def load_config(config_file):
         if CONFIG["token"] == "xxxxxxxxxxxxxxxx":
             raise Exception("Your config.yml has the default Lichess API token. This is probably wrong.")
 
+        print(os.system("ls engines/"))
+        print(os.system("./engines/ctengine"))
+        print(os.system("ls -la ./"))
         if not os.path.isdir(CONFIG["engine"]["dir"]):
             raise Exception("Your engine directory `{}` is not a directory.")
 

@@ -1,9 +1,9 @@
-token: "xxxxxxxxxxxxxxxx"    # Lichess OAuth2 Token.
+token: ""    # Lichess OAuth2 Token.
 url: "https://lichess.org/"  # Lichess base URL.
 
 engine:                      # Engine settings.
   dir: "./engines/"          # Directory containing engines, relative to this project.
-  name: "engine_name"        # Binary name of the engine to use.
+  name: "ctengine"        # Binary name of the engine to use.
   protocol: "uci"            # "uci" or "xboard"
   ponder: true               # Think on opponent's time.
   polyglot:
@@ -23,7 +23,7 @@ engine:                      # Engine settings.
 # engine_options:            # Any custom command line params to pass to the engine.
 #   cpuct: 3.1
   homemade_options:
-#   Hash: 256  
+#   Hash: 256
   uci_options:               # Arbitrary UCI options passed to the engine.
     Move Overhead: 100       # Increase if your bot flags games too often.
     Threads: 2               # Max CPU threads the engine can use.
@@ -58,8 +58,8 @@ correspondence:
 
 challenge:                   # Incoming challenges.
   concurrency: 1             # Number of games to play simultaneously.
-  sort_by: "best"            # Possible values: "best" and "first".
-  accept_bot: false          # Accepts challenges coming from other bots.
+  sort_by: "first"            # Possible values: "best" and "first".
+  accept_bot: true          # Accepts challenges coming from other bots.
   only_bot: false            # Accept challenges by bots only.
   max_increment: 180         # Maximum amount of increment to accept a challenge. The max is 180. Set to 0 for no increment.
   min_increment: 0           # Minimum amount of increment to accept a challenge.
@@ -67,7 +67,7 @@ challenge:                   # Incoming challenges.
   min_base: 0                # Minimum amount of base time to accept a challenge.
   variants:                  # Chess variants to accept (https://lichess.org/variant).
     - standard
-#   - fromPosition
+    - fromPosition
 #   - antichess
 #   - atomic
 #   - chess960

@@ -1,7 +1,3 @@
-# ChessTrainer.lua
-
-A chess bot and application which plays moves from the lichess database based on assigned weights for popularity of each move
-=======
 # lichess-bot
 
 [![Python Build](https://github.com/ShailChoksi/lichess-bot/actions/workflows/python-build.yml/badge.svg)](https://github.com/ShailChoksi/lichess-bot/actions/workflows/python-build.yml)
@@ -137,4 +133,3 @@ team to get this API up. Thanks to the Niklas Fiekas and his [python-chess](http
 
 # License
 lichess-bot is licensed under the AGPLv3 (or any later version at your option). Check out LICENSE.txt for the full text.
->>>>>>> 2ba454e6144c232fc75011f7859a0a1cc2f27587
