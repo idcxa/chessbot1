@@ -6,6 +6,7 @@ nixpkgs.mkShell {
   buildInputs = [
     python39Packages.pip
     python39Packages.virtualenv
-    cargo
+    docker
+    heroku
     ];
   }
