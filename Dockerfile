@@ -1,26 +1,20 @@
-FROM python:3
-ADD lichess-bot.py /
-#RUN python3 -m venv venv #if this fails you probably need to add Python3 to your PATH
-#RUN  virtualenv venv -p python3 #if this fails you probably need to add Python3 to your PATH
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv $VIRTUAL_ENV
-ENV PATH="./:$VIRTUAL_ENV/bin:$PATH"
-#RUN source ./venv/bin/activate
+FROM python:3.8-slim-buster
+
+# stop python making annoying .pyc files
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# no buffering for better logging
+ENV PYTHONUNBUFFERED=1
+
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN python -m pip install -r requirements.txt
 
-COPY lichess-bot.py .
-COPY engine_wrapper.py .
-COPY model.py .
-COPY lichess.py .
-COPY logging_pool.py .
-COPY config.py .
-COPY conversation.py .
-COPY ColorLogger.py .
-COPY config.py .
-COPY config.yml .
+# just copy absolutely everything to /app
+WORKDIR /app
+COPY . /app
 
-RUN mkdir ./engines/
-ADD engines/ctengine ./engines/
-COPY engines/README.md ./engines/
-CMD [ "python",  "lichess-bot.py" ]
+RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
+USER appuser
+
+# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
+CMD ["python", "lichess-bot.py"]
