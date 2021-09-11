@@ -13,8 +13,7 @@ def create_engine(config):
     engine_path = os.path.join(cfg["dir"], cfg["name"])
     engine_type = cfg.get("protocol")
     engine_options = cfg.get("engine_options")
-    commands = ["lua", engine_path]
-    #commands = [engine_path]
+    commands = [engine_path]
     if engine_options:
         for k, v in engine_options.items():
             commands.append("--{}={}".format(k, v))
