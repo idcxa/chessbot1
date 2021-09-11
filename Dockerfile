@@ -16,6 +16,7 @@ RUN ls engines/
 FROM python:3.8-slim-buster
 WORKDIR /app
 COPY . /app
+RUN apt-get update && apt-get upgrade -y && apt-get install -y ruby
 # stop python making annoying .pyc files
 ENV PYTHONDONTWRITEBYTECODE=1
 
